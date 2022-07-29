@@ -18,7 +18,6 @@ def main():
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   sock.bind((UDP_IP, PORT))
 
-
   print(f'Listening at {UDP_IP}:{PORT}')
   while True: 
     if(bat):
