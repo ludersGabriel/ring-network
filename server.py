@@ -22,10 +22,10 @@ def main():
   while True: 
     if(bat):
       sock.sendto(MESSAGE, (TARGET_IP, TARGET_PORT))
-      print(f'Sent message "{MESSAGE}" to "{TARGET_IP}:{TARGET_PORT}"')
+      print(f'Sent message "{MESSAGE.decode()}" to "{TARGET_IP}:{TARGET_PORT}"')
       print(f'Waiting response...')
       data, addr = sock.recvfrom(1024)
-      print(f'Received message "{data}" from "{addr}"\n')
+      print(f'Received message "{data.decode()}" from "{addr}"\n')
     else:
       print(f'Waiting message...')
       data, addr = sock.recvfrom(1024)
