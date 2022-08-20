@@ -4,17 +4,22 @@ import socket
 
 # message format
 # 10101011  | 
-# MI 8b 0:8 | origin ip 32b 8:40 | origin port 32b 40:72 | destiny ip 32b 72:104 | destiny port 32b 104:136 | type 4bits 136:140 | combination 4b 140:144 | bet 4b 144:148 | ph 1b 148: 
+# MI 8b 0:8 | player ip 32b 8:40 | player port 32b 40:72 | type 4bits 72:76 | combination 4b 76:80 | bet 4b 80:112 | ph 1b 112:  
 
 # Message types
-# 1: message starting at the origin to choose who will roll the dice
-# 2: message from origin to tell the player to make his play
-# 3: message from player to the origin to update its balance
-# 4: message from the origin to players updating balances
-# 5: message to pass the bat -> is this a message? Does the bat has to be a struct?
+# 1: message starting at the origin to choose who will roll the dice == 0001 (1)
+# 2: message from origin to tell the player to make his play == 0010 (2)
+# 3: message updating player balance == 0011 (3)
+# 4: message to pass the bat -> is this a message? Does the bat has to be a struct? == 0100 (4)
 
 class Message:
   __START_MARKER = '10101011'
+
+  # message types
+  _BETTING = '0001'
+  _CHOSEN_PLAYER = '0010'
+  _UPDATE_PLAYER_BALANCE = '0011'
+  _PASSING_BAT = '0100' 
 
   def __init__(self, message):
     self.binMessage = message
@@ -28,26 +33,20 @@ class Message:
     self.bitMessage = bitarray(self.message)
     self.marker = self.bitMessage[0:8].to01()
 
-    # sets origin related fields
-    self.originIp = self.__decodeIp(self.bitMessage[8:40])
-    self.originPort = self.__decodePort(self.bitMessage[40:72])
-
-    # sets destiny related fields
-    self.destinyIp = self.__decodeIp(self.bitMessage[72:104])
-    self.destinyPort = self.__decodePort(self.bitMessage[104:136])
+    # sets current player fields
+    self.playerIp = self.__decodeIp(self.bitMessage[8:40])
+    self.playerPort = self.__decodePort(self.bitMessage[40:72])
 
     # sets game related fields
-    self.type = self.bitMessage[136:140].to01()
-    self.combination = self.bitMessage[140:144].to01()
-    self.bet = self.bitMessage[144:148].to01()
-    self.ph = self.bitMessage[148:].to01()
+    self.type = self.bitMessage[72:76].to01()
+    self.combination = self.bitMessage[76:80].to01()
+    self.bet = int(self.bitMessage[80:112].to01(), 2)
+    self.ph = self.bitMessage[112:].to01()
     
   def print_me(self):
     print(self.marker)
-    print(self.originIp)
-    print(self.originPort)
-    print(self.destinyIp)
-    print(self.destinyPort)
+    print(self.playerIp)
+    print(self.playerPort)
     print(self.type)
     print(self.combination)
     print(self.bet)
@@ -55,14 +54,14 @@ class Message:
 
   def __validate(self):
     # If the message doesn't have the correct size, garbage is set to True.
-    if(len(self.message) < 85):
-      self.garbage = True
-      return
+    # if(len(self.message) < 85):
+    #   self.garbage = True
+    #   return
 
     self.garbage = not self.message[0:8] == self.__START_MARKER
 
   def isGarbage(self):
-    return self.garbage
+    return False
 
   # receives a binary IP and returns as a string 
   @classmethod
@@ -85,18 +84,16 @@ class Message:
     return int(port.to01(), 2)
 
   @classmethod
-  def binaryMessage(self, originIp, originPort, destinyIp, destinyPort, type, combination, bet):
-    return self.__START_MARKER.encode() + self.__encodeIp(originIp) + self.__encodePort(originPort) + self.__encodeIp(destinyIp) + self.__encodePort(destinyPort) + type.encode() + combination.encode() + bet.encode() + b'1'
+  def binaryMessage(self, playerIp, playerPort, type, combination, bet):
+    return self.__START_MARKER.encode() + self.__encodeIp(playerIp) + self.__encodePort(playerPort) + type.encode() + combination.encode() + bin(bet)[2:].zfill(32).encode() + b'0'
 
 def main():
   binMessage = Message.binaryMessage(
     '127.0.0.1',
     5000,
-    '127.0.0.1',
-    5001,
     '0000',
     '1111',
-    '0000'
+    80000
   )
 
   msg = Message(binMessage)
@@ -105,6 +102,7 @@ def main():
     return
 
   msg.print_me()
+  print(msg.isGarbage())
 
 if __name__ == '__main__':
   main()

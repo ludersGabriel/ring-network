@@ -1,39 +1,83 @@
-import base64
 import socket
 import sys
-import time
+from game import Game
+from message import Message
+from client_api import Client
+from server_api import Server
+
+if(len(sys.argv) < 6):
+  print('Usage: ./server ip port targetIp targetPort initialCoin bat')
+  sys.exit()
+
+UDP_IP = sys.argv[1]
+PORT = int(sys.argv[2])
+TARGET_IP = sys.argv[3]
+TARGET_PORT = int(sys.argv[4])
+INITIAL_COIN = int(sys.argv[5])
+BAT = int(sys.argv[6])  
+
+def setBat(value):
+  global BAT
+  BAT = value
 
 def main():
-  if(len(sys.argv) < 6):
-    print('Usage: ./server ip port targetIp targetPort bat')
-    sys.exit()
   
-  UDP_IP = sys.argv[1]
-  PORT = int(sys.argv[2])
-  TARGET_IP = sys.argv[3]
-  TARGET_PORT = int(sys.argv[4])
-  bat = int(sys.argv[5])
-  MESSAGE = b'Hello from ' + UDP_IP.encode() + b':' + sys.argv[2].encode()
-
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   sock.bind((UDP_IP, PORT))
 
-  print(f'Listening at {UDP_IP}:{PORT}')
+  game = Game(UDP_IP, PORT)
+  game.updateSelfPlayer(INITIAL_COIN)
+
+  server = Server(
+    UDP_IP,
+    PORT,
+    TARGET_IP,
+    TARGET_PORT,
+    INITIAL_COIN,
+    game,
+    sock,
+    setBat
+  )
+
+  client = Client(
+    UDP_IP,
+    PORT,
+    TARGET_IP,
+    TARGET_PORT,
+    INITIAL_COIN,
+    game,
+    sock,
+    setBat
+  )
+
   while True: 
-    if(bat):
-      sock.sendto(MESSAGE, (TARGET_IP, TARGET_PORT))
-      print(f'Sent message "{MESSAGE.decode()}" to "{TARGET_IP}:{TARGET_PORT}"')
-      print(f'Waiting response...')
-      data, addr = sock.recvfrom(1024)
-      print(f'Received message "{data.decode()}" from "{addr}"\n')
-    else:
-      print(f'Waiting message...')
-      data, addr = sock.recvfrom(1024)
-      print(f'Received message "{data}" from "{addr}"')
-      time.sleep(3)
-      sock.sendto(MESSAGE, (TARGET_IP, TARGET_PORT))
-      print(f'Responded with "{MESSAGE}" to "{TARGET_IP}:{TARGET_PORT}"\n')
-    time.sleep(5)
+    if(game.state == game._GREETINGS):
+      # Cria a mensagem com suas credenciais
+      if BAT:
+        server.greetings()
+      else:
+        client.greetings()       
+    elif(game.state == game._PLAYING):
+      if BAT: 
+        pass
+      else:
+        game.printPlayers()
+        print()
+        data, addr = sock.recvfrom(1024)
+        received = Message(data)
+
+        if not received.isGarbage():
+          if received.type == Message._UPDATE_PLAYER_BALANCE:
+            game.updatePlayer(received)
+
+        if not received.type == Message._PASSING_BAT:
+          sock.sendto(data, (TARGET_IP, TARGET_PORT))
+    elif(game.state == game._ENDING):
+      if BAT: 
+        pass
+      else:
+        pass
+  
   
 if __name__ == '__main__':
   main()
