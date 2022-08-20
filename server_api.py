@@ -11,6 +11,7 @@ class Server:
     assert isinstance(sock, socket.socket)
     assert isinstance(setBat, types.FunctionType)
 
+    # Inicializa a classe
     self.ip = ip
     self.port = port
     self.targetIp = targetIp
@@ -23,19 +24,10 @@ class Server:
     self.sock = sock
     self.setBat = setBat
 
-  def greetings(self):
-    message = Message.binaryMessage(
-      self.ip, 
-      self.port,
-      Message._UPDATE_PLAYER_BALANCE,
-      self.game._ANY,
-      self.initialCoin
-    )
-    # Manda suas credenciais aos outros jogadores
-    self.sock.sendto(message, (self.targetIp, self.targetPort))
+  def listen(self, message):
     data, addr = self.sock.recvfrom(1024)
-    
     received = Message(data)
+
     # Envia a mensagem até não retornar lixo
     while received.isGarbage():
       self.sock.sendto(message, (self.targetIp, self.targetPort))
@@ -43,6 +35,12 @@ class Server:
       data, addr = self.sock.recvfrom(1024)
       received = Message(data)
 
+    return received, data
+
+  def send(self, message):
+    self.sock.sendto(message, (self.targetIp, self.targetPort))
+
+  def passBat(self, state = ''):
     # Passamos o bastão e atualizamos o estado da instância do jogo
     message = Message.binaryMessage(
       self.ip, 
@@ -51,8 +49,45 @@ class Server:
       self.game._ANY,
       0
     )
+
     self.setBat(False)
+    self.send(message)
+
+  def greetings(self):
+    # Cria a mensagem com seu saldo, IP e porta
+    message = Message.binaryMessage(
+      self.ip, 
+      self.port,
+      Message._UPDATE_PLAYER_BALANCE,
+      self.game._ANY,
+      self.initialCoin
+    )
+
+    self.send(message)
+
+    self.listen(message)
+
     self.game.updateState(self.game._PLAYING)
-    self.sock.sendto(message, (self.targetIp, self.targetPort))
 
+  def playing(self):
+    bet, howMuch = self.game.chooseBet()
 
+    message = Message.binaryMessage(
+      self.ip,
+      self.port,
+      Message._BETTING,
+      bet,
+      howMuch
+    )
+
+    self.send(message)
+
+    self.listen()
+
+  def loop(self):
+    if self.game.state == self.game._GREETINGS:
+      self.greetings()
+    elif self.game.state == self.game._PLAYING:
+      self.playing()
+
+    self.passBat()
