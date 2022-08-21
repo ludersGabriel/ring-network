@@ -1,3 +1,4 @@
+import os
 import socket
 import sys
 from game import Game
@@ -21,6 +22,7 @@ def setBat(value):
   BAT = value
 
 def main():
+  os.system('clear')
   sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   sock.bind((UDP_IP, PORT))
 

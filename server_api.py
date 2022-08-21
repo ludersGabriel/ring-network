@@ -1,4 +1,5 @@
 from telnetlib import IP
+from time import sleep
 import types
 from message import Message
 from game import Game
@@ -17,6 +18,7 @@ class Server:
     self.targetIp = targetIp
     self.targetPort = taretPort
     self.initialCoin = initialCoin
+    self.id = f'{ip}:{port}'
 
     self.game = game
     self.game.updateSelfPlayer(initialCoin)
@@ -24,16 +26,31 @@ class Server:
     self.sock = sock
     self.setBat = setBat
 
-  def listen(self, message):
+  def listen(self):
     data, addr = self.sock.recvfrom(1024)
     received = Message(data)
 
-    # Envia a mensagem até não retornar lixo
-    while received.isGarbage():
-      self.sock.sendto(message, (self.targetIp, self.targetPort))
+    if received.type == Message._ERROR:
+      print('Um erro ocorreu')
+      print('Me matando')
 
-      data, addr = self.sock.recvfrom(1024)
-      received = Message(data)
+      self.send(data)
+      sys.exit()
+
+    if received.isGarbage():
+      print('Um erro ocorreu')
+      print('Me matando')
+
+      message = Message.binaryMessage(
+        self.ip,
+        self.port,
+        Message._ERROR,
+        self.game._ANY,
+        self.game.coins
+      )
+
+      self.send(message)
+      sys.exit()
 
     return received, data
 
@@ -58,31 +75,108 @@ class Server:
     message = Message.binaryMessage(
       self.ip, 
       self.port,
-      Message._UPDATE_PLAYER_BALANCE,
+      Message._GREETING,
       self.game._ANY,
       self.initialCoin
     )
 
     self.send(message)
 
-    self.listen(message)
+    rec, d =self.listen()
+    self.game.printPlayer(rec)
 
     self.game.updateState(self.game._PLAYING)
 
   def playing(self):
-    bet, howMuch = self.game.chooseBet()
+    combination, howMuch = self.game.chooseBet()
 
     message = Message.binaryMessage(
       self.ip,
       self.port,
       Message._BETTING,
-      bet,
+      combination,
       howMuch
     )
 
     self.send(message)
 
-    self.listen()
+    rec, d = self.listen()
+
+    if rec.playerId == self.id:
+      won = self.game.makePlay(rec)
+      messageType = Message._UPDATE_PLAYER_BALANCE
+      newCoins = self.game.coins
+
+      if(won):
+        newCoins += self.game._BET_PRIZE[rec.combination] - rec.bet 
+      else:
+        newCoins -= rec.bet
+
+      self.game.updateSelfPlayer(newCoins)
+
+      if(self.game.coins <= 0):
+        messageType = Message._END_GAME
+
+      message = Message.binaryMessage(
+        self.ip,
+        self.port,
+        messageType,
+        self.game._ANY,
+        self.game.coins
+      )
+
+      self.send(message)
+
+      if(self.game.coins <= 0):
+        print(f'Ops! Você zerou suas fichas. Fim do jogo!')
+        print(f'Matando jogadores')
+
+      self.listen()
+
+      if(self.game.coins <= 0):
+        print('Me matando')
+        sys.exit()
+        
+    else:
+      message = Message.binaryMessage(
+        rec.playerIp,
+        rec.playerPort,
+        Message._CHOSEN_PLAYER,
+        combination,
+        rec.bet
+      )
+
+      self.send(message)
+
+      print(f'Jogador {rec.playerId} cobriu sua aposta! Ele vai jogar')
+      rec, d = self.listen()
+      messageType = Message._UPDATE_PLAYER_BALANCE
+      self.game.updatePlayer(rec)    
+
+      if rec.bet <= 0:
+        messageType = Message._END_GAME
+
+      message = Message.binaryMessage(
+        rec.playerIp,
+        rec.playerPort,
+        messageType,
+        self.game._ANY,
+        rec.bet
+      )
+
+      self.send(message)
+
+      if rec.bet <= 0:
+        print(f'Jogador {rec.playerId} zerou as fichas')
+        print('Matando jogadores')
+
+      self.listen()
+
+      if rec.bet <= 0:
+        print('Me matando')
+        sys.exit()
+
+    print('Fim do seu turno! Controle passado ao próximo jogador')
 
   def loop(self):
     if self.game.state == self.game._GREETINGS:
