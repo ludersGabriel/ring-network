@@ -6,13 +6,8 @@ import socket
 
 # message format
 # 10101011  | 
-# MI 8b 0:8 | player ip 32b 8:40 | player port 32b 40:72 | type 4bits 72:76 | combination 4b 76:80 | bet 4b 80:112 | ph 1b 112:  
-
-# Message types
-# 1: message starting at the origin to choose who will roll the dice == 0001 (1)
-# 2: message from origin to tell the player to make his play == 0010 (2)
-# 3: message updating player balance == 0011 (3)
-# 4: message to pass the bat -> is this a message? Does the bat has to be a struct? == 0100 (4)
+# MI 8b 0:8 | player ip 32b 8:40 | player port 32b 40:72 | type 4bits 72:76 | combination 4b 76:80 | bet 4bytes 80:112 | ph 1b 112:  
+# b = bits
 
 class Message:
   __START_MARKER = '10101011'
@@ -70,6 +65,10 @@ class Message:
       self.garbage = True
 
   def isGarbage(self):
+    chance = randrange(15)
+    if(chance == 5):
+      return True
+    
     return self.garbage
 
   def parity(self): 

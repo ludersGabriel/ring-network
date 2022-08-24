@@ -314,13 +314,28 @@ class Game:
 
 def main(): 
   game = Game('127.0.0.1', 5555, 5)
-  print(game.verifyPlay(game._PAR, [2,1,1,4,5]))
-  print(game.verifyPlay(game._TRINCA, [2,1,1,1,5]))
-  print(game.verifyPlay(game._DOIS_PARES, [2,1,1,4,4]))
-  print(game.verifyPlay(game._DOIS_PARES, [2,1,1,1,1]))
-  print(game.verifyPlay(game._FULL_HOUSE, [2,2,3,3,3]))
-  print(game.verifyPlay(game._FULL_HOUSE, [5,5,5,5,5]))
-
+  print(game.verifyPlay(game._PAR, [2,1,1,4,5])) # true
+  print(game.verifyPlay(game._PAR, [1,1,1,1,5])) # true
+  print(game.verifyPlay(game._PAR, [1,1,2,2,5])) # true
+  print(game.verifyPlay(game._PAR, [1,3,2,6,5])) # false
+  print(game.verifyPlay(game._TRINCA, [2,1,1,1,5])) # true
+  print(game.verifyPlay(game._TRINCA, [2,1,1,2,5])) # false
+  print(game.verifyPlay(game._DOIS_PARES, [2,1,1,4,4])) # true
+  print(game.verifyPlay(game._DOIS_PARES, [2,1,1,1,1])) # true
+  print(game.verifyPlay(game._FULL_HOUSE, [2,2,3,3,3])) # true
+  print(game.verifyPlay(game._FULL_HOUSE, [5,5,5,5,5])) # false
+  print(game.verifyPlay(game._SEQ_BAIXA, [1,2,3,4,5])) # true
+  print(game.verifyPlay(game._SEQ_BAIXA, [2,3,4,5,6])) # false
+  print(game.verifyPlay(game._SEQ_BAIXA, [2,3,3,4,6])) # false
+  print(game.verifyPlay(game._SEQ_ALTA, [2,3,4,5,6])) # true
+  print(game.verifyPlay(game._SEQ_ALTA, [2,3,3,5,6])) # false
+  print(game.verifyPlay(game._SEQ_ALTA, [1,2,3,4,5])) # false
+  print(game.verifyPlay(game._QUADRA, [2,2,2,2,5])) # true
+  print(game.verifyPlay(game._QUADRA, [2,2,2,2,2])) # true
+  print(game.verifyPlay(game._QUADRA, [1,2,3,4,5])) # false
+  print(game.verifyPlay(game._QUINTETO, [5,5,5,5,5])) # true
+  print(game.verifyPlay(game._QUINTETO, [1,2,3,4,5])) # false
+  
 
 if __name__ == '__main__':
   main()

@@ -114,11 +114,6 @@ class Client:
 
   def loop(self):
     received, data = self.listen()
-    if received.type == Message._ERROR:
-      self.send(data)
-      print('Um erro ocorreu em algum lugar')
-      print('Me matando')
-      sys.exit()
 
     if self.game.state == self.game._GREETINGS:
       self.greetings(received)
